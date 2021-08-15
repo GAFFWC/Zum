@@ -27,14 +27,40 @@ wsServer.on("listening", () => {
     console.log("WebSocket Server Listening on ws://localhost:3000");
 });
 
+const sockets = [];
+
 wsServer.on("connection", (socket) => {
-    console.log(`Connected to Browser`);
+    socket["nickname"] = "unknown";
+    sockets.push(socket);
+
+    console.log("users : ", sockets.length);
 
     socket.on("close", (code, reason) => {
         console.log(`WebSocket DisConnected from Browser`);
     });
 
     socket.on("message", (message) => {
-        console.log("New Message : ", message.toString("utf-8"));
+        try {
+            message = JSON.parse(message.toString());
+        } catch (err) {
+            console.error(err);
+            return;
+        }
+
+        console.log("New Message : ", message);
+
+        const { type, payload } = message;
+
+        switch (type) {
+            case "nickname":
+                console.log(payload);
+                socket.nickname = payload;
+                break;
+            case "message":
+                sockets.filter((aSocket) => aSocket.nickname !== socket.nickname).forEach((aSocket) => aSocket.send(`${socket.nickname}: ${payload}`));
+                break;
+            default:
+                break;
+        }
     });
 });
