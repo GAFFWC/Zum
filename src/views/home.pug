@@ -13,13 +13,14 @@ html(lang="en")
         main
             div#welcome
                 form
-                    input(type="text", placeholder="room name", required) 
+                    input(type="text", placeholder="room name", required)#room_name 
+                    input(type="text", placeholder="nickname", required)#name
                     button Enter Room
 
             div#room
                 h3
                 ul
-                form
+                form#message
                     input(type="text", placeholder="message", required)
                     button Send
 
