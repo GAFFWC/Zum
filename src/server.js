@@ -30,14 +30,28 @@ httpServer.listen(3000, () => {
 wsServer.on("connection", (socket) => {
     console.log("SOCKET - ", socket.id, socket.connected ? "CONNECTED" : "DISCONNECTED");
 
+    socket["nickname"] = "unknown";
+
     socket.onAny((event) => {
         console.log("New Event : ", event);
     });
 
-    socket.on("enter_room", (roomName, done) => {
+    socket.on("enter_room", (roomName, nickname, done) => {
+        socket.nickname = nickname;
         socket.join(roomName);
         done(roomName);
         console.log("SOCKET - ", socket.id, "Joined Room", roomName);
-        socket.to(roomName).emit("welcome");
+        socket.to(roomName).emit("welcome", socket.nickname);
+    });
+
+    socket.on("nickname", (nickname) => (socket["nickname"] = nickname));
+
+    socket.on("new_message", (message, roomName, done) => {
+        socket.to(roomName).emit("new_message", `${socket.nickname}: ${message}`);
+        done();
+    });
+
+    socket.on("disconnecting", () => {
+        socket.rooms.forEach((room) => socket.to(room).emit("bye", socket.nickname));
     });
 });
