@@ -1,6 +1,6 @@
 import express from "express";
-import ws from "ws";
 import http from "http";
+import socketio from "socket.io";
 import pug from "pug";
 const app = express();
 
@@ -17,50 +17,27 @@ app.use("/public", express.static(__dirname + "/public"));
 app.get("/*", (req, res) => res.redirect("/"));
 
 const httpServer = http.createServer(app);
-const wsServer = new ws.Server({ server: httpServer });
+const wsServer = new socketio.Server(httpServer);
+
+// wsServer.listen(httpServer, () => {
+//     console.log("Websocket Server Listening on ws://localhost:3000");
+// });
 
 httpServer.listen(3000, () => {
-    console.log("Http Server Listening on http://localhost:3000");
+    console.log("Http/Websocket Server Listening on http://localhost:3000");
 });
-
-wsServer.on("listening", () => {
-    console.log("WebSocket Server Listening on ws://localhost:3000");
-});
-
-const sockets = [];
 
 wsServer.on("connection", (socket) => {
-    socket["nickname"] = "unknown";
-    sockets.push(socket);
+    console.log("SOCKET - ", socket.id, socket.connected ? "CONNECTED" : "DISCONNECTED");
 
-    console.log("users : ", sockets.length);
-
-    socket.on("close", (code, reason) => {
-        console.log(`WebSocket DisConnected from Browser`);
+    socket.onAny((event) => {
+        console.log("New Event : ", event);
     });
 
-    socket.on("message", (message) => {
-        try {
-            message = JSON.parse(message.toString());
-        } catch (err) {
-            console.error(err);
-            return;
-        }
-
-        console.log("New Message : ", message);
-
-        const { type, payload } = message;
-
-        switch (type) {
-            case "nickname":
-                console.log(payload);
-                socket.nickname = payload;
-                break;
-            case "message":
-                sockets.filter((aSocket) => aSocket.nickname !== socket.nickname).forEach((aSocket) => aSocket.send(`${socket.nickname}: ${payload}`));
-                break;
-            default:
-                break;
-        }
+    socket.on("enter_room", (roomName, done) => {
+        socket.join(roomName);
+        done(roomName);
+        console.log("SOCKET - ", socket.id, "Joined Room", roomName);
+        socket.to(roomName).emit("welcome");
     });
 });
