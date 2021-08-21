@@ -1,3 +1,8 @@
+// Code Challenge
+// TODO data channel 반영해보기
+// NOTE webRTC는 peer가 늘어나면 비효율적임 -> SFU
+// data channel로는 비디오, 오디오를 제외하고는 p2p도 문제없이 가능
+
 const socket = io();
 
 // welcome Form (join)
@@ -26,6 +31,11 @@ welcomeForm.addEventListener("submit", async (event) => {
 socket
     .on("welcome", async () => {
         console.log("someone joined");
+
+        // data channel
+        dataChannel = peerConnection.createDataChannel("chat");
+        dataChannel.addEventListener("message", console.log);
+
         const offer = await peerConnection.createOffer();
         console.log(offer);
         await peerConnection.setLocalDescription(offer);
@@ -33,6 +43,11 @@ socket
         console.log("sent the offer");
     })
     .on("offer", async (offer) => {
+        peerConnection.addEventListener("datachannel", (event) => {
+            dataChannel = event.channel;
+            dataChannel.addEventListener("message", console.log);
+        });
+
         console.log("received the offer");
         await peerConnection.setRemoteDescription(offer);
 
@@ -120,9 +135,16 @@ camerasSelect.addEventListener("input", async (_) => {
 
 // RTC codes
 let peerConnection;
+let dataChannel;
 
 const makeConnection = () => {
-    peerConnection = new RTCPeerConnection();
+    peerConnection = new RTCPeerConnection({
+        iceServers: [
+            {
+                urls: ["stun:stun.l.google.com:19302", "stun:stun1.l.google.com:19302", "stun:stun2.l.google.com:19302", "stun:stun3.l.google.com:19302", "stun:stun4.l.google.com:19302"]
+            }
+        ]
+    });
     peerConnection.addEventListener("icecandidate", (data) => {
         socket.emit("ice", data.candidate, roomName);
         console.log("sent ice candidate");
